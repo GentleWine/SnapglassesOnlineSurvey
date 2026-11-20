@@ -53,7 +53,19 @@ function applyImages(root, images) {
   root.querySelectorAll("img[data-image]").forEach((img) => {
     const url = dataUrl(images[img.dataset.image]);
     if (url) img.src = url;
+    const frame = img.closest(".frame");
+    if (frame) frame.classList.remove("loading");
   });
+}
+
+function pictureFrame(item, alt) {
+  const frame = document.createElement("div");
+  frame.className = "frame loading";
+  const image = document.createElement("img");
+  image.alt = alt;
+  image.dataset.image = item.image;
+  frame.appendChild(image);
+  return frame;
 }
 
 function rememberToken(token) {
@@ -122,6 +134,8 @@ function filtered() {
   );
 }
 
+let catalogRequest = 0;
+
 async function renderCatalog() {
   const items = filtered();
   const size = state.pageSize;
@@ -134,18 +148,19 @@ async function renderCatalog() {
   document.querySelector("#prev").disabled = state.page <= 1;
   document.querySelector("#next").disabled = state.page >= pages;
   document.querySelector("#cart-count").textContent = String(state.cart.size);
+  const request = ++catalogRequest;
   grid.replaceChildren();
   slice.forEach((item) => grid.appendChild(productCard(item)));
-  applyImages(grid, await imageMap(slice.map((item) => item.image)));
+  const images = await imageMap(slice.map((item) => item.image));
+  if (request === catalogRequest) applyImages(grid, images);
 }
 
 function productCard(item) {
   const card = document.createElement("article");
   card.className = "product";
-  const image = document.createElement("img");
-  image.alt = item.product;
-  image.dataset.image = item.image;
-  image.addEventListener("click", () => openDetail(item));
+  const frame = pictureFrame(item, item.product);
+  frame.classList.add("zoom");
+  frame.addEventListener("click", () => openDetail(item));
   const body = document.createElement("div");
   body.className = "product-body";
   const brand = document.createElement("p");
@@ -178,7 +193,7 @@ function productCard(item) {
   more.addEventListener("click", () => openDetail(item));
   actions.append(add, more);
   body.append(brand, title, meta, styles, actions);
-  card.append(image, body);
+  card.append(frame, body);
   return card;
 }
 
@@ -189,14 +204,17 @@ function toggleCart(id) {
   if (!cartView.hidden) renderCart();
 }
 
+let detailRequest = 0;
+
 async function openDetail(item) {
   const dialog = document.querySelector("#detail");
   const image = document.querySelector("#detail-image");
+  const frame = image.closest(".frame");
+  const request = ++detailRequest;
   image.removeAttribute("src");
   image.alt = item.product;
-  const images = await imageMap([item.image]);
-  const url = dataUrl(images[item.image]);
-  if (url) image.src = url;
+  image.dataset.image = item.image;
+  frame.classList.add("loading");
   const body = document.querySelector("#detail-body");
   body.replaceChildren();
   const rows = [
@@ -218,7 +236,10 @@ async function openDetail(item) {
     line.append(strong, document.createTextNode(value || "—"));
     body.appendChild(line);
   });
-  dialog.showModal();
+  if (!dialog.open) dialog.showModal();
+  const images = await imageMap([item.image]);
+  if (request !== detailRequest) return;
+  applyImages(frame, images);
 }
 
 document.querySelector("#detail-close").addEventListener("click", () => {
@@ -265,8 +286,11 @@ document.querySelector("#back").addEventListener("click", () => {
   renderCatalog();
 });
 
+let cartRequest = 0;
+
 async function renderCart() {
   document.querySelector("#cart-count").textContent = String(state.cart.size);
+  const request = ++cartRequest;
   cartList.replaceChildren();
   if (state.cart.size === 0) {
     const empty = document.createElement("p");
@@ -282,16 +306,15 @@ async function renderCart() {
     visible.push(item);
     cartList.appendChild(cartRow(item, score));
   });
-  applyImages(cartList, await imageMap(visible.map((item) => item.image)));
+  const images = await imageMap(visible.map((item) => item.image));
+  if (request === cartRequest) applyImages(cartList, images);
 }
 
 function cartRow(item, score) {
   const row = document.createElement("article");
   row.className = "cart-item";
   row.dataset.id = item.id;
-  const image = document.createElement("img");
-  image.alt = "";
-  image.dataset.image = item.image;
+  const frame = pictureFrame(item, "");
   const body = document.createElement("div");
   const title = document.createElement("h3");
   title.textContent = item.product;
@@ -308,7 +331,7 @@ function cartRow(item, score) {
     renderCart();
   });
   body.appendChild(remove);
-  row.append(image, body);
+  row.append(frame, body);
   return row;
 }
 
