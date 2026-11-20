@@ -36,37 +36,46 @@ function dataUrl(info) {
 }
 
 const imageCache = new Map();
+let preloadGeneration = 0;
 
-async function imageMap(names) {
-  const unique = [...new Set(names.filter(Boolean))];
-  const images = {};
-  const missing = [];
-  unique.forEach((name) => {
-    const cached = imageCache.get(name);
-    if (cached) images[name] = cached;
-    else missing.push(name);
+function applyCachedImages(root) {
+  root.querySelectorAll("img[data-image]").forEach((img) => {
+    const url = dataUrl(imageCache.get(img.dataset.image));
+    if (!url) return;
+    img.src = url;
+    const frame = img.closest(".frame");
+    if (frame) frame.classList.remove("loading");
   });
-  for (let index = 0; index < missing.length; index += 8) {
-    const data = await api("images", { token: state.token, names: missing.slice(index, index + 8) });
+}
+
+async function preloadImages(names, generation) {
+  for (let index = 0; index < names.length; index += 8) {
+    if (generation !== preloadGeneration || !state.token) return;
+    const batch = names.slice(index, index + 8).filter((name) => !imageCache.has(name));
+    if (!batch.length) continue;
+    const data = await api("images", { token: state.token, names: batch });
+    if (generation !== preloadGeneration || !state.token) return;
     if (!data.ok) {
       if (/access key|session/i.test(data.error || "")) showGate(data.error);
-      break;
+      return;
     }
     Object.entries(data.images || {}).forEach(([name, info]) => {
       if (info && info.data) imageCache.set(name, info);
     });
-    Object.assign(images, data.images || {});
+    applyCachedImages(document);
   }
-  return images;
 }
 
-function applyImages(root, images) {
-  root.querySelectorAll("img[data-image]").forEach((img) => {
-    const url = dataUrl(images[img.dataset.image]);
-    if (url) img.src = url;
-    const frame = img.closest(".frame");
-    if (frame) frame.classList.remove("loading");
+function startPreload() {
+  const generation = ++preloadGeneration;
+  const names = [];
+  const seen = new Set();
+  state.products.forEach((item) => {
+    if (!item.image || seen.has(item.image)) return;
+    seen.add(item.image);
+    names.push(item.image);
   });
+  preloadImages(names, generation);
 }
 
 function pictureFrame(item, alt) {
@@ -88,6 +97,7 @@ function rememberToken(token) {
   else {
     sessionStorage.removeItem("surveyToken");
     imageCache.clear();
+    preloadGeneration += 1;
   }
 }
 
@@ -104,10 +114,13 @@ async function enterApp() {
     return;
   }
   state.products = data.products || [];
-  document.querySelector("#page-size").max = String(state.products.length);
+  document.querySelector("#page-size").max = String(Math.max(1, state.products.length));
   gate.hidden = true;
   app.hidden = false;
+  catalog.hidden = false;
+  cartView.hidden = true;
   renderCatalog();
+  startPreload();
 }
 
 function showGate(message) {
@@ -151,9 +164,7 @@ function filtered() {
   );
 }
 
-let catalogRequest = 0;
-
-async function renderCatalog() {
+function renderCatalog() {
   const items = filtered();
   const size = state.pageSize;
   const pages = Math.max(1, Math.ceil(items.length / size));
@@ -165,11 +176,8 @@ async function renderCatalog() {
   document.querySelector("#prev").disabled = state.page <= 1;
   document.querySelector("#next").disabled = state.page >= pages;
   document.querySelector("#cart-count").textContent = String(state.cart.size);
-  const request = ++catalogRequest;
   grid.replaceChildren();
   slice.forEach((item) => grid.appendChild(productCard(item)));
-  const images = await imageMap(slice.map((item) => item.image));
-  if (request === catalogRequest) applyImages(grid, images);
 }
 
 function productCard(item) {
@@ -221,13 +229,10 @@ function toggleCart(id) {
   if (!cartView.hidden) renderCart();
 }
 
-let detailRequest = 0;
-
-async function openDetail(item) {
+function openDetail(item) {
   const dialog = document.querySelector("#detail");
   const image = document.querySelector("#detail-image");
   const frame = image.closest(".frame");
-  const request = ++detailRequest;
   image.removeAttribute("src");
   image.alt = item.product;
   image.dataset.image = item.image;
@@ -260,9 +265,6 @@ async function openDetail(item) {
     body.appendChild(line);
   });
   if (!dialog.open) dialog.showModal();
-  const images = await imageMap([item.image]);
-  if (request !== detailRequest) return;
-  applyImages(frame, images);
 }
 
 document.querySelector("#detail-close").addEventListener("click", () => {
@@ -309,11 +311,8 @@ document.querySelector("#back").addEventListener("click", () => {
   renderCatalog();
 });
 
-let cartRequest = 0;
-
-async function renderCart() {
+function renderCart() {
   document.querySelector("#cart-count").textContent = String(state.cart.size);
-  const request = ++cartRequest;
   cartList.replaceChildren();
   if (state.cart.size === 0) {
     const empty = document.createElement("p");
@@ -322,15 +321,11 @@ async function renderCart() {
     cartList.appendChild(empty);
     return;
   }
-  const visible = [];
   state.cart.forEach((score, id) => {
     const item = state.products.find((product) => product.id === id);
     if (!item) return;
-    visible.push(item);
     cartList.appendChild(cartRow(item, score));
   });
-  const images = await imageMap(visible.map((item) => item.image));
-  if (request === cartRequest) applyImages(cartList, images);
 }
 
 function cartRow(item, score) {
