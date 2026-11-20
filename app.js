@@ -35,15 +35,26 @@ function dataUrl(info) {
   return `data:${info.mime || "image/jpeg"};base64,${info.data}`;
 }
 
+const imageCache = new Map();
+
 async function imageMap(names) {
   const unique = [...new Set(names.filter(Boolean))];
   const images = {};
-  for (let index = 0; index < unique.length; index += 8) {
-    const data = await api("images", { token: state.token, names: unique.slice(index, index + 8) });
+  const missing = [];
+  unique.forEach((name) => {
+    const cached = imageCache.get(name);
+    if (cached) images[name] = cached;
+    else missing.push(name);
+  });
+  for (let index = 0; index < missing.length; index += 8) {
+    const data = await api("images", { token: state.token, names: missing.slice(index, index + 8) });
     if (!data.ok) {
       if (/access key|session/i.test(data.error || "")) showGate(data.error);
       break;
     }
+    Object.entries(data.images || {}).forEach(([name, info]) => {
+      if (info && info.data) imageCache.set(name, info);
+    });
     Object.assign(images, data.images || {});
   }
   return images;
@@ -60,10 +71,13 @@ function applyImages(root, images) {
 
 function pictureFrame(item, alt) {
   const frame = document.createElement("div");
-  frame.className = "frame loading";
+  frame.className = "frame";
   const image = document.createElement("img");
   image.alt = alt;
   image.dataset.image = item.image;
+  const url = dataUrl(imageCache.get(item.image));
+  if (url) image.src = url;
+  else frame.classList.add("loading");
   frame.appendChild(image);
   return frame;
 }
@@ -71,7 +85,10 @@ function pictureFrame(item, alt) {
 function rememberToken(token) {
   state.token = token || "";
   if (state.token) sessionStorage.setItem("surveyToken", state.token);
-  else sessionStorage.removeItem("surveyToken");
+  else {
+    sessionStorage.removeItem("surveyToken");
+    imageCache.clear();
+  }
 }
 
 function showBanner(text) {
@@ -214,7 +231,13 @@ async function openDetail(item) {
   image.removeAttribute("src");
   image.alt = item.product;
   image.dataset.image = item.image;
-  frame.classList.add("loading");
+  const cachedUrl = dataUrl(imageCache.get(item.image));
+  if (cachedUrl) {
+    image.src = cachedUrl;
+    frame.classList.remove("loading");
+  } else {
+    frame.classList.add("loading");
+  }
   const body = document.querySelector("#detail-body");
   body.replaceChildren();
   const rows = [
