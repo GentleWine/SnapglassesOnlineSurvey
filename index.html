@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Frame preference survey</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section id="gate" class="gate">
+    <form id="gate-form" class="gate-card">
+      <p class="eyebrow">Preference survey</p>
+      <h1>Frame preference survey</h1>
+      <p class="lede">Browse every frame, add the ones you like to the cart, then score them.</p>
+      <label for="key">Access key</label>
+      <input id="key" name="key" type="password" autocomplete="current-password" required>
+      <p id="gate-error" class="error" hidden></p>
+      <p id="gate-done" class="done" hidden></p>
+      <button type="submit">Enter</button>
+    </form>
+  </section>
+
+  <div id="app" hidden>
+    <header class="top">
+      <div>
+        <p class="eyebrow">Preference survey</p>
+        <h1>Frame preference survey</h1>
+      </div>
+      <div class="top-actions">
+        <button type="button" id="open-cart" class="cart-button">Cart <span id="cart-count">0</span></button>
+        <button type="button" id="logout" class="text-button">End session</button>
+      </div>
+    </header>
+
+    <p id="banner" class="banner" hidden></p>
+
+    <main id="catalog">
+      <div class="toolbar">
+        <p id="count-label"></p>
+        <label>Per page
+          <input id="page-size" type="number" min="1" max="135" value="12">
+        </label>
+        <label class="search">
+          <span class="sr">Search</span>
+          <input id="query" type="search" placeholder="Search name or brand">
+        </label>
+      </div>
+      <div id="grid" class="grid"></div>
+      <nav class="pager">
+        <button type="button" id="prev">Previous</button>
+        <span id="page-label"></span>
+        <button type="button" id="next">Next</button>
+      </nav>
+    </main>
+
+    <section id="cart-view" hidden>
+      <div class="cart-head">
+        <button type="button" id="back" class="text-button">Back to frames</button>
+        <h2>Cart and scores</h2>
+        <p class="rule">Frames left out of the cart count as low value and are not saved. For each frame in the cart, choose Rank 1, 2, or 3 first (1 is the top tier), then a score from 1 to 7 (7 is the highest).</p>
+      </div>
+      <div class="cart-layout">
+        <div id="cart-list" class="cart-list"></div>
+        <form id="profile" class="profile">
+          <h3>Guest</h3>
+          <label>Name
+            <input name="name" required maxlength="80" autocomplete="name">
+          </label>
+          <label>Gender
+            <select name="gender" required>
+              <option value="">Select</option>
+              <option>Female</option>
+              <option>Male</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>Age
+            <input name="age" type="number" min="1" max="120" required inputmode="numeric">
+          </label>
+          <label>Contact
+            <input name="contact" maxlength="120" placeholder="Phone or email, optional" autocomplete="email">
+          </label>
+          <label>Photo
+            <input name="avatar" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required>
+          </label>
+          <img id="avatar-preview" alt="" hidden>
+          <p id="form-error" class="error" hidden></p>
+          <button type="submit" id="finish">Finish</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <dialog id="detail">
+    <div class="detail-card">
+      <button type="button" id="detail-close" class="text-button">Close</button>
+      <img id="detail-image" alt="">
+      <div id="detail-body"></div>
+    </div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
