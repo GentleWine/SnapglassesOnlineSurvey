@@ -143,7 +143,41 @@ button[type="submit"], .cart-button, .choice.selected, .pager button {
   object-fit: contain;
 }
 
-.product img { height: 160px; cursor: zoom-in; }
+.frame {
+  position: relative;
+  display: grid;
+  background: #fff;
+}
+
+.frame img { height: 100%; }
+
+.product .frame { height: 160px; }
+
+.frame.zoom { cursor: zoom-in; }
+
+.frame.loading img { visibility: hidden; }
+
+.frame.loading::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame.loading::after { animation: none; }
+}
 
 .product-body, .detail-card, .cart-item, .profile { padding: 0.9rem 1rem 1rem; }
 
@@ -196,7 +230,7 @@ button[type="submit"], .cart-button, .choice.selected, .pager button {
   border-radius: 18px;
 }
 
-.cart-item img { height: 110px; border-radius: 12px; }
+.cart-item .frame { height: 110px; border-radius: 12px; }
 
 .choices { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.35rem 0 0.7rem; }
 
@@ -223,7 +257,7 @@ button[type="submit"], .cart-button, .choice.selected, .pager button {
 
 #detail::backdrop { background: rgba(28, 25, 21, 0.45); }
 
-#detail-image { height: min(240px, 36vh); border-radius: 12px; }
+#detail .frame { height: min(240px, 36vh); border-radius: 12px; }
 
 .detail-card { display: grid; gap: 0.6rem; }
 
