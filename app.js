@@ -432,6 +432,7 @@ document.querySelector("#profile").addEventListener("submit", async (event) => {
       token: state.token,
       name: form.name.value,
       gender: form.gender.value,
+      work_type: form.work_type.value,
       age: form.age.value,
       contact: form.contact.value,
       avatar: { data: await fileToBase64(photo), type: photo.type },
